@@ -45,11 +45,14 @@ export interface Segment {
   text_redacted?: string | null;
 }
 
+export type RedactionState = "pending" | "available" | "failed";
+
 export interface Transcript {
   recording_id: string;
   language: string;
   speaker_count: number;
-  redaction?: "pending" | "available";
+  /** Redacted view: a state string. Original (admin) view: the stored status object. */
+  redaction?: RedactionState | { status: string; engine?: string | null; error?: string };
   segments: Segment[];
   full_text?: string;
   full_text_redacted?: string | null;

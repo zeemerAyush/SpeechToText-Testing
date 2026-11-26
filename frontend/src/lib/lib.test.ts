@@ -1,7 +1,7 @@
 import type { Segment } from "../types";
 import { formatBytes, formatDuration, formatTimestamp } from "./format";
 import { hasAcceptedExtension, pickRecorderFormat } from "./mime";
-import { findActiveSegment, findActiveWord, isInFlight, speakerSlot, stageLabel } from "./transcript";
+import { findActiveSegment, findActiveWord, isInFlight, redactionState, speakerSlot, stageLabel } from "./transcript";
 
 const seg = (start: number, end: number): Segment => ({ speaker: "Speaker 1", start, end, confidence: 1 });
 
@@ -81,5 +81,19 @@ describe("mime", () => {
     expect(hasAcceptedExtension("Visit.WAV")).toBe(true);
     expect(hasAcceptedExtension("notes.pdf")).toBe(false);
     expect(hasAcceptedExtension("noextension")).toBe(false);
+  });
+});
+
+describe("redactionState", () => {
+  it("normalises the string form (redacted view) and the object form (original view)", () => {
+    expect(redactionState({ redaction: "available" })).toBe("available");
+    expect(redactionState({ redaction: "failed" })).toBe("failed");
+    expect(redactionState({ redaction: { status: "ok" } })).toBe("available");
+    expect(redactionState({ redaction: { status: "failed", error: "x" } })).toBe("failed");
+    expect(redactionState({ redaction: { status: "not_run" } })).toBe("pending");
+    expect(redactionState({})).toBe("pending");
+  });
+  it("labels the redaction stage", () => {
+    expect(stageLabel("redact")).toBe("Redacting sensitive information");
   });
 });

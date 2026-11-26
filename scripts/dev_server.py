@@ -13,6 +13,7 @@ Never use this for real data or on a server: the accounts are public and the tra
 from __future__ import annotations
 
 import math
+import re
 import secrets
 import shutil
 import struct
@@ -36,13 +37,15 @@ from app.config import Settings, get_settings  # noqa: E402
 from app.db.mongo import ensure_indexes, get_db, get_db_or_none  # noqa: E402
 from app.gate.service import run_gate  # noqa: E402
 from app.main import app  # noqa: E402
+from worker.pipeline.redact import Entity, Redactor, rule_entities  # noqa: E402
 from worker.run_worker import run_once  # noqa: E402
 
 PASSWORD = "devpassword123"
 HOST = "127.0.0.1"
 
 SCRIPT = [
-    (1, "Good morning. Thanks for coming in today. How have you been feeling since the procedure?"),
+    (1, "Good morning, I am Dr. Patel. Thanks for coming in today. How have you been feeling since the procedure?"),
+    (2, "Hello. My name is Maria Lopez and you can reach me on 555 014 2237 or maria.lopez@example.com."),
     (2, "Honestly, a bit sore around the incision, but the pain is much better than last week."),
     (1, "That's expected. Any fever, redness or discharge from the wound?"),
     (2, "No fever. There was a little redness at first, but it has gone down."),
@@ -50,6 +53,14 @@ SCRIPT = [
     (2, "Okay. Is it alright to start walking more? I would like to get back to my normal routine."),
     (1, "Short walks are fine. Avoid lifting anything heavy for another two weeks."),
 ]
+
+
+def dev_names(text: str) -> list[Entity]:
+    """Stand-in for NER (Presidio + spaCy are not installed in development)."""
+    return [Entity(m.start(), m.end(), "PERSON", 0.85) for m in re.finditer(r"Maria Lopez|Patel", text)]
+
+
+REDACTOR = Redactor([rule_entities, dev_names])
 
 
 def make_tone_wav(path: Path, seconds: float = 40.0, rate: int = 8000) -> None:
@@ -71,11 +82,14 @@ def canned_transcript() -> dict:
             words.append({"word": tok, "start": round(t, 2), "end": round(t + dur, 2), "prob": 0.95})
             t += dur + 0.05
         segments.append({"speaker": f"Speaker {who}", "start": round(start, 2), "end": round(t, 2),
-                         "text": text, "confidence": 0.94, "words": words})
+                         "text": text, "text_redacted": REDACTOR.redact(text), "confidence": 0.94,
+                         "words": words})
         t += 0.8
     return {
         "language": "en", "duration_sec": round(t, 2), "speaker_count": 2, "segments": segments,
         "full_text": "\n".join(f"{s['speaker']}: {s['text']}" for s in segments),
+        "full_text_redacted": "\n".join(f"{s['speaker']}: {s['text_redacted']}" for s in segments),
+        "redaction": {"status": "ok", "engine": "dev rules"},
         "pipeline": {"whisper_model": "dev-fake", "diarization_model": "dev-fake", "device": "none",
                      "denoise": True, "timings_sec": {}},
     }
@@ -83,7 +97,7 @@ def canned_transcript() -> dict:
 
 def fake_runner(audio: Path, options: dict, on_stage) -> dict:
     assert audio.stat().st_size > 0
-    for stage in ("convert", "denoise", "vad", "transcribe", "diarize"):
+    for stage in ("convert", "denoise", "vad", "transcribe", "diarize", "redact"):
         on_stage(stage)
         time.sleep(1.2)
     return canned_transcript()

@@ -11,7 +11,7 @@ import { useAuth } from "../auth";
 import StatusBadge from "../components/StatusBadge";
 import TranscriptView from "../components/TranscriptView";
 import { formatDate, formatDuration } from "../lib/format";
-import { isInFlight } from "../lib/transcript";
+import { isInFlight, redactionState } from "../lib/transcript";
 import type { Recording, Transcript } from "../types";
 
 const POLL_MS = 2000;
@@ -28,6 +28,7 @@ export default function TranscriptPage() {
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<"original" | "redacted">("original"); // admins can switch
   const [reloadKey, setReloadKey] = useState(0); // bump to restart polling (e.g. after a retry)
   const audio = useRef<HTMLAudioElement>(null);
 
@@ -119,7 +120,10 @@ export default function TranscriptPage() {
     }
   }
 
-  const pendingRedaction = transcript && !isAdmin && transcript.redaction !== "available";
+  // Non-admins only ever receive redacted text; admins can flip between the two to check the redaction.
+  const mode = isAdmin ? view : "redacted";
+  const state = transcript ? redactionState(transcript) : "pending";
+  const showRedactionNotice = transcript && mode === "redacted" && state !== "available";
 
   return (
     <>
@@ -172,15 +176,34 @@ export default function TranscriptPage() {
             />
           )}
 
-          {pendingRedaction && (
+          {transcript && isAdmin && (
+            <div className="row segmented" role="group" aria-label="Transcript version">
+              <button type="button" aria-pressed={view === "original"} onClick={() => setView("original")}>
+                Original
+              </button>
+              <button type="button" aria-pressed={view === "redacted"} onClick={() => setView("redacted")}>
+                Redacted
+              </button>
+            </div>
+          )}
+          {showRedactionNotice && (
             <p className="notice">
-              The redacted transcript is not available yet. Text is withheld until PHI redaction is in place.
+              {state === "failed"
+                ? "Automatic redaction did not complete for this recording, so no text is shown. Ask an administrator to re-run it."
+                : "The redacted transcript is not available yet. Text is withheld until redaction has run."}
+            </p>
+          )}
+          {transcript && mode === "redacted" && state === "available" && (
+            <p className="muted small">
+              Names, contact details, dates and ID numbers are replaced automatically. This is best effort and may miss
+              some identifiers.
             </p>
           )}
           {transcript && (
             <div className="card">
               <TranscriptView
                 segments={transcript.segments}
+                mode={mode}
                 currentTime={isAdmin && audioUrl ? time : undefined}
                 playing={playing}
                 onSeek={isAdmin && audioUrl ? seek : undefined}

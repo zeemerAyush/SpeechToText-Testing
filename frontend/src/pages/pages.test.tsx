@@ -176,3 +176,54 @@ describe("Transcript page", () => {
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 });
+
+describe("Transcript page: redaction", () => {
+  const seg = { speaker: "Speaker 1", start: 0, end: 2, confidence: 0.9 };
+  const redactedAvailable: Transcript = {
+    recording_id: "rec_1", language: "en", speaker_count: 1, redaction: "available",
+    segments: [{ ...seg, text_redacted: "My name is [PERSON]." }],
+  };
+  const adminBoth: Transcript = {
+    recording_id: "rec_1", language: "en", speaker_count: 1, redaction: { status: "ok", engine: "x" },
+    segments: [{ ...seg, text: "My name is John Smith.", text_redacted: "My name is [PERSON]." }],
+  };
+
+  it("non-admins read the redacted text with a best-effort note and no warning", async () => {
+    signedIn("viewer");
+    vi.mocked(api.getRecording).mockResolvedValue(rec());
+    vi.mocked(api.getTranscript).mockResolvedValue(redactedAvailable);
+    renderAt("/recordings/rec_1", <TranscriptPage />, "/recordings/:id");
+    expect(await screen.findByText("My name is [PERSON].")).toBeInTheDocument();
+    expect(screen.getByText(/best effort/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not available yet/i)).toBeNull();
+    expect(screen.queryByRole("group", { name: "Transcript version" })).toBeNull();
+  });
+
+  it("explains when redaction failed", async () => {
+    signedIn("uploader");
+    vi.mocked(api.getRecording).mockResolvedValue(rec());
+    vi.mocked(api.getTranscript).mockResolvedValue({ ...redactedAvailable, redaction: "failed",
+      segments: [{ ...seg, text_redacted: null }] });
+    renderAt("/recordings/rec_1", <TranscriptPage />, "/recordings/:id");
+    expect(await screen.findByText(/redaction did not complete/i)).toBeInTheDocument();
+    expect(screen.getByText("[text withheld]")).toBeInTheDocument();
+  });
+
+  it("admins can switch between the original and redacted text", async () => {
+    signedIn("admin");
+    vi.mocked(api.getRecording).mockResolvedValue(rec());
+    vi.mocked(api.getTranscript).mockResolvedValue(adminBoth);
+    renderAt("/recordings/rec_1", <TranscriptPage />, "/recordings/:id");
+    expect(await screen.findByText("My name is John Smith.")).toBeInTheDocument();
+    expect(screen.queryByText(/best effort/i)).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Redacted" }));
+    expect(screen.getByText("My name is [PERSON].")).toBeInTheDocument();
+    expect(screen.queryByText("My name is John Smith.")).toBeNull();
+    expect(screen.getByText(/best effort/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Original" }));
+    expect(screen.getByText("My name is John Smith.")).toBeInTheDocument();
+    expect(api.getTranscript).toHaveBeenCalledTimes(1); // toggling does not refetch
+  });
+});

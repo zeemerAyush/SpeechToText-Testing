@@ -1,9 +1,16 @@
 """What each role may see of a transcript. Pure functions, no I/O.
 
-PHI redaction arrives in Phase 5. Until then ``text_redacted`` is null, so the redacted view
-carries no text at all: the original text is never shown to roles that may not see it (fail closed).
+The redacted view only ever contains ``text_redacted``. If redaction did not succeed it is null, so the
+view carries no text at all: original text is never shown to roles that may not see it (fail closed).
 """
 from __future__ import annotations
+
+
+def _redaction_state(t: dict) -> str:
+    status = (t.get("redaction") or {}).get("status")
+    if status == "ok" and t.get("full_text_redacted") is not None:
+        return "available"
+    return "failed" if status == "failed" else "pending"
 
 
 def redacted_view(t: dict) -> dict:
@@ -11,7 +18,7 @@ def redacted_view(t: dict) -> dict:
         "recording_id": t["recording_id"],
         "language": t["language"],
         "speaker_count": t["speaker_count"],
-        "redaction": "available" if t.get("full_text_redacted") is not None else "pending",
+        "redaction": _redaction_state(t),
         "segments": [
             {
                 "speaker": s["speaker"],

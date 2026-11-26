@@ -100,6 +100,8 @@ tr:last-child td { border-bottom: 0; }
 .rec-dot { width: .8rem; height: .8rem; border-radius: 50%; background: var(--danger); animation: pulse 1s ease-in-out infinite; }
 .preview audio, .player { width: 100%; }
 .player { margin-bottom: 1rem; }
+.segmented { margin: 0 0 .75rem; gap: .4rem; }
+.segmented button[aria-pressed="true"] { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 
 .transcript { display: grid; gap: .6rem; }
 .seg { border-left: 4px solid var(--border); padding: .5rem .8rem; border-radius: 0 8px 8px 0; background: var(--bg); }

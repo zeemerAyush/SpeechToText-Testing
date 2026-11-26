@@ -88,6 +88,23 @@ def fake_result(text: str = "My name is John Smith.") -> dict:
     }
 
 
+def redacted_result() -> dict:
+    """A transcript as the pipeline returns it when redaction succeeded."""
+    result = fake_result("My name is John Smith.")
+    result["segments"][0]["text_redacted"] = "My name is [PERSON]."
+    result["full_text_redacted"] = "Speaker 1: My name is [PERSON]."
+    result["redaction"] = {"status": "ok", "engine": "test"}
+    return result
+
+
+def failed_redaction_result() -> dict:
+    result = fake_result("My name is John Smith.")
+    result["segments"][0]["text_redacted"] = None
+    result["full_text_redacted"] = None
+    result["redaction"] = {"status": "failed", "engine": "test", "error": "OSError: model missing"}
+    return result
+
+
 def ok_runner(audio, options, on_stage):
     """Stand-in for the ML pipeline: reads the decrypted audio, reports stages, returns a transcript."""
     assert audio.exists() and audio.stat().st_size > 0

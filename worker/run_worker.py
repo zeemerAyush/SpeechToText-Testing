@@ -57,14 +57,15 @@ def claim_next(db: Database) -> dict | None:
 
 
 def store_transcript(db: Database, rec_id: str, result: dict) -> None:
-    """Save the transcript. Redacted fields stay null until PHI redaction (Phase 5) exists."""
+    """Save the transcript. Redacted text is null unless redaction succeeded (fail closed)."""
     doc = {
         "recording_id": rec_id,
         "language": result["language"],
         "speaker_count": result["speaker_count"],
-        "segments": [{**seg, "text_redacted": None} for seg in result["segments"]],
+        "segments": [{**seg, "text_redacted": seg.get("text_redacted")} for seg in result["segments"]],
         "full_text": result["full_text"],
-        "full_text_redacted": None,
+        "full_text_redacted": result.get("full_text_redacted"),
+        "redaction": result.get("redaction", {"status": "not_run", "engine": None}),
         "pipeline": result["pipeline"],
         "created_at": datetime.now(timezone.utc),
     }

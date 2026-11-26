@@ -5,22 +5,24 @@ import type { Segment } from "../types";
 
 interface Props {
   segments: Segment[];
-  /** Original text is shown when present; otherwise the redacted text. */
+  /** "redacted" shows only redacted text; "original" falls back to redacted when no original is present. */
+  mode?: "original" | "redacted";
   currentTime?: number;
   playing?: boolean;
   onSeek?: (sec: number) => void;
 }
 
-function segmentText(seg: Segment): string | null {
+function segmentText(seg: Segment, mode: "original" | "redacted"): string | null {
+  if (mode === "redacted") return seg.text_redacted ?? null;
   return seg.text ?? seg.text_redacted ?? null;
 }
 
-/** Word-level highlighting is only exact when the shown text is the words themselves. */
-function wordsMatchText(seg: Segment): boolean {
-  return !!seg.words?.length && seg.text !== undefined && seg.text_raw === undefined;
+/** Word-level highlighting is only exact when the shown text is the original words themselves. */
+function wordsMatchText(seg: Segment, mode: "original" | "redacted"): boolean {
+  return mode === "original" && !!seg.words?.length && seg.text !== undefined && seg.text_raw === undefined;
 }
 
-export default function TranscriptView({ segments, currentTime, playing, onSeek }: Props) {
+export default function TranscriptView({ segments, mode = "original", currentTime, playing, onSeek }: Props) {
   const active = currentTime === undefined ? -1 : findActiveSegment(segments, currentTime);
   const refs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -32,9 +34,10 @@ export default function TranscriptView({ segments, currentTime, playing, onSeek 
   return (
     <div className="transcript">
       {segments.map((seg, i) => {
-        const text = segmentText(seg);
+        const text = segmentText(seg, mode);
         const isActive = i === active;
-        const wordIdx = isActive && wordsMatchText(seg) ? findActiveWord(seg.words!, currentTime!) : -1;
+        const exactWords = wordsMatchText(seg, mode);
+        const wordIdx = isActive && exactWords ? findActiveWord(seg.words!, currentTime!) : -1;
         return (
           <div
             key={i}
@@ -57,7 +60,7 @@ export default function TranscriptView({ segments, currentTime, playing, onSeek 
             <p>
               {text === null ? (
                 <span className="muted">[text withheld]</span>
-              ) : wordsMatchText(seg) ? (
+              ) : exactWords ? (
                 seg.words!.map((w, j) => (
                   <span key={j} className={j === wordIdx ? "word on" : "word"}>
                     {w.word}{" "}

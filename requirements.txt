@@ -18,6 +18,9 @@ faster-whisper
 pyannote.audio==3.3.*
 silero-vad
 deepfilternet
+# Phase 5: PHI redaction. Also run once: python -m spacy download en_core_web_lg
+presidio-analyzer
+spacy
 nvidia-cublas-cu12; sys_platform != "darwin"
 nvidia-cudnn-cu12==9.*; sys_platform != "darwin"
 

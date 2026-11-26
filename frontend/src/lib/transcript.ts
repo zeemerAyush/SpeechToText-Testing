@@ -1,4 +1,4 @@
-import type { Segment, Status, Word } from "../types";
+import type { RedactionState, Segment, Status, Transcript, Word } from "../types";
 
 const PALETTE_SIZE = 8;
 
@@ -51,6 +51,7 @@ const STAGE_LABELS: Record<string, string> = {
   vad: "Detecting speech",
   transcribe: "Transcribing",
   diarize: "Separating speakers",
+  redact: "Redacting sensitive information",
 };
 
 export function stageLabel(stage: string | null): string {
@@ -65,3 +66,12 @@ export const STATUS_LABELS: Record<Status, string> = {
   completed: "Completed",
   failed: "Failed",
 };
+
+/** Normalise both shapes the API uses (string in the redacted view, object in the original view). */
+export function redactionState(t: Pick<Transcript, "redaction">): RedactionState {
+  const r = t.redaction;
+  if (typeof r === "string") return r;
+  if (r && r.status === "ok") return "available";
+  if (r && r.status === "failed") return "failed";
+  return "pending";
+}

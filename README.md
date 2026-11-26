@@ -74,3 +74,28 @@ python scripts/dev_server.py --port 8010      # logins admin / uploader / viewer
 Pages: login, recordings list (auto-refreshes while jobs run), new recording (upload with drag-and-drop, or record
 in the browser with mic selector, level meter, timer, pause/resume), and the transcript view (colour-coded speakers,
 timestamps; admins also get the audio player with click-to-seek and live highlighting).
+
+## Phase 5: PHI redaction
+
+Every transcript segment gets a `text_redacted` copy with identifiers replaced by tags such as `[PERSON]`,
+`[PHONE_NUMBER]`, `[EMAIL_ADDRESS]`, `[DATE_TIME]`, `[LOCATION]`, `[MEDICAL_RECORD_NUMBER]`, `[ID_NUMBER]`.
+Detection has two layers (`worker/pipeline/redact.py`):
+
+- **Rules** (pure Python, always on): spoken digit runs ("five five five ..."), record/insurance numbers after a cue
+  ("MRN is ..."), emails, SSNs, long digit strings, street addresses and specific dates.
+- **Presidio + spaCy** (names, places, plus Presidio's own recognizers). Needs `presidio-analyzer`, `spacy` and the
+  `en_core_web_lg` model installed once (`python -m spacy download en_core_web_lg`); it then runs fully offline.
+
+Tuned for clinical speech: relative times ("next week", "two days"), doses and vitals are kept, and eponymous
+conditions ("Parkinson's", "Foley catheter") are not mistaken for people (`ALLOW_LIST`).
+
+**Fail closed.** If redaction cannot run (for example the spaCy model is missing), the transcript is still stored for
+admins, but `text_redacted` stays empty, so viewers and uploaders see no text and a notice explaining why. Admins can
+switch between *Original* and *Redacted* on the transcript page to check the result. Re-run redaction later with:
+
+```powershell
+python -m worker.redact_backfill      # redacts stored transcripts that have no (or failed) redaction
+```
+
+Redaction is best effort (names in lowercase or noisy speech can be missed); access control and encryption remain the
+primary protection. Audio itself is not redacted.

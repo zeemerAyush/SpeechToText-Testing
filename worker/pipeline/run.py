@@ -32,6 +32,7 @@ class PipelineConfig:
     compute_type: str = config.COMPUTE_TYPE
     whisper_model_dir: str | None = config.WHISPER_MODEL_DIR
     pyannote_config: str = config.PYANNOTE_CONFIG
+    spacy_model: str = config.SPACY_MODEL
 
 
 @dataclass
@@ -42,11 +43,16 @@ class Stages:
     transcribe: Callable[[Path, str | None], list[dict]]   # (wav, prompt) -> words
     diarize: Callable[[Path, int | None, int | None], list[dict]]  # (wav, min, max) -> turns
     timings: dict[str, float] = field(default_factory=dict)
+    # text -> text with PHI replaced by [TAGS]. None means redaction is not configured: transcripts are then
+    # stored WITHOUT redacted text, which keeps them hidden from non-admin roles (fail closed).
+    redact: Callable[[str], str] | None = None
+    redact_engine: str = "none"
 
 
 def default_stages(cfg: PipelineConfig) -> Stages:
     """Real stages. Models load on first use and are reused across recordings."""
     from worker.pipeline import audio_clean, diarize, transcribe
+    from worker.pipeline import redact as redact_mod
 
     cache: dict = {}
 
@@ -62,12 +68,19 @@ def default_stages(cfg: PipelineConfig) -> Stages:
             cache["pyannote"] = diarize.load_pipeline(cfg.pyannote_config, cfg.device)
         return diarize.diarize(cache["pyannote"], wav, lo, hi)
 
+    def redact_stage(text: str) -> str:
+        if "redactor" not in cache:
+            cache["redactor"] = redact_mod.build_redactor(cfg.spacy_model)
+        return cache["redactor"].redact(text)
+
     return Stages(
         convert=audio_clean.convert_to_wav16k,
         denoise=lambda src, dst: audio_clean.denoise(src, dst, cfg.device),
         vad=audio_clean.speech_regions,
         transcribe=transcribe_stage,
         diarize=diarize_stage,
+        redact=redact_stage,
+        redact_engine="presidio+rules",
     )
 
 
@@ -119,6 +132,7 @@ def process_audio(
             segments, speech_regions=regions, filler_removal=options.filler_removal
         )
         segments = merge.label_speakers(segments)  # after cleanup, so dropped junk never takes "Speaker 1"
+        redaction = redact_segments(segments, stages, on_stage)
     finally:
         wipe_dir(work)
 
@@ -128,6 +142,12 @@ def process_audio(
         "speaker_count": len({s["speaker"] for s in segments}),
         "segments": [_public_segment(s) for s in segments],
         "full_text": "\n".join(f'{s["speaker"]}: {s["text"]}' for s in segments),
+        "full_text_redacted": (
+            "\n".join(f'{s["speaker"]}: {s["text_redacted"]}' for s in segments)
+            if redaction["status"] == "ok"
+            else None
+        ),
+        "redaction": redaction,
         "pipeline": {
             "whisper_model": cfg.whisper_model,
             "diarization_model": "pyannote/speaker-diarization-3.1",
@@ -140,6 +160,29 @@ def process_audio(
     }
 
 
+def redact_segments(segments: list[dict], stages: Stages, on_stage: Callable[[str], None] | None) -> dict:
+    """Add ``text_redacted`` to every segment. Never raises: on any failure no redacted text is kept
+    (fail closed) and the returned status says why, so the transcript is still stored for admins."""
+    if stages.redact is None:
+        for s in segments:
+            s["text_redacted"] = None
+        return {"status": "not_run", "engine": None}
+    if on_stage:
+        on_stage("redact")
+    t0 = time.perf_counter()
+    try:
+        redacted = [stages.redact(s["text"]) for s in segments]
+    except Exception as exc:
+        for s in segments:
+            s["text_redacted"] = None
+        return {"status": "failed", "engine": stages.redact_engine, "error": f"{type(exc).__name__}: {exc}"[:200]}
+    finally:
+        stages.timings["redact"] = round(time.perf_counter() - t0, 2)
+    for s, text in zip(segments, redacted):
+        s["text_redacted"] = text
+    return {"status": "ok", "engine": stages.redact_engine}
+
+
 def _public_segment(s: dict) -> dict:
     out = {
         "speaker": s["speaker"],
@@ -149,6 +192,7 @@ def _public_segment(s: dict) -> dict:
         "confidence": round(s["confidence"], 3) if s.get("confidence") is not None else None,
         "words": s["words"],
     }
+    out["text_redacted"] = s.get("text_redacted")
     if "text_raw" in s:
         out["text_raw"] = s["text_raw"]
     return out
