@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from app.auth.security import hash_password
 from app.config import Settings, get_settings
-from app.db.mongo import ensure_indexes, get_db
+from app.db.mongo import ensure_indexes, get_db, get_db_or_none
 from app.main import app
 
 
@@ -53,6 +53,7 @@ def db():
 @pytest.fixture
 def client(db, settings):
     app.dependency_overrides[get_db] = lambda: db
+    app.dependency_overrides[get_db_or_none] = lambda: db
     app.dependency_overrides[get_settings] = lambda: settings
     yield TestClient(app)
     app.dependency_overrides.clear()

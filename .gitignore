@@ -29,3 +29,6 @@ models/
 *.onnx
 
 DESIGN.md
+
+# Browser-test scratch
+.playwright-mcp/

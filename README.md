@@ -20,7 +20,7 @@ uvicorn app.main:app --app-dir backend --port 8000
 python -m worker.run_worker                                       # separate terminal
 ```
 
-On the GPU server set `REQUIRE_FFPROBE=true` and install FFmpeg so uploads are fully decoded.
+Set `REQUIRE_FFPROBE=true` (with FFmpeg installed) so uploads are fully decoded.
 
 ## Phase 2: command-line pipeline
 
@@ -51,3 +51,26 @@ Interrupted jobs are requeued when the worker restarts.
 
 PHI redaction is Phase 5. Until then the redacted view carries no text (fail closed): only admins can read
 transcripts, via `?original=true`.
+
+## Phase 4: web UI
+
+React + Vite + TypeScript in `frontend/`. FastAPI serves the built app at `/` (same origin, so no CORS) with
+security headers. Page URLs use `#/...` so they never collide with API paths.
+
+```powershell
+cd frontend
+npm ci
+npm test              # 24 unit/component tests
+npm run build         # type check + production build into frontend/dist
+npm run dev           # hot reload; proxies the API to http://127.0.0.1:8000 (override with BACKEND_URL)
+```
+
+Try the whole app **without MongoDB, GPU or models** (development only, in-memory, fake pipeline):
+
+```powershell
+python scripts/dev_server.py --port 8010      # logins admin / uploader / viewer, password devpassword123
+```
+
+Pages: login, recordings list (auto-refreshes while jobs run), new recording (upload with drag-and-drop, or record
+in the browser with mic selector, level meter, timer, pause/resume), and the transcript view (colour-coded speakers,
+timestamps; admins also get the audio player with click-to-seek and live highlighting).

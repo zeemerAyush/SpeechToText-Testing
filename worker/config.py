@@ -8,7 +8,7 @@ os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 DEVICE = os.environ.get("DEVICE", "cpu")  # cuda | cpu
-WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "small")  # e.g. large-v3 on the GPU server
+WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "small")  # e.g. large-v3 on a GPU
 # float16 on GPU, int8 on CPU unless overridden.
 COMPUTE_TYPE = os.environ.get("COMPUTE_TYPE", "float16" if DEVICE == "cuda" else "int8")
 # Optional local folder with a pre-downloaded faster-whisper model (otherwise the HF cache is used).

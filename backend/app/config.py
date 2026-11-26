@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     max_upload_mb: int = 500
     max_duration_sec: int = 7200
     require_ffprobe: bool = False
+    enable_docs: bool = False  # /docs lists every endpoint; keep off outside development
 
     @property
     def audio_dir(self) -> Path:
