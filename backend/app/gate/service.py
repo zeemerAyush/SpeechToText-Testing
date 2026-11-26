@@ -62,6 +62,7 @@ def run_gate(
     source: str,
     reference: str | None,
     ip: str | None,
+    options: dict | None = None,
 ) -> dict:
     """Run the gate on an uploaded stream. Returns the recording document on success.
 
@@ -77,6 +78,9 @@ def run_gate(
             "source": source,
             "original_filename": clean_name,
             "reference": reference,
+            "options": options or {},
+            "stage": None,
+            "attempts": 0,
             "audio_path": None,
             "data_key": None,
             "sha256": None,

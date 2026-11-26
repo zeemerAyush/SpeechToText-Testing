@@ -33,3 +33,21 @@ Needs the ML packages (see `requirements.txt`, Phase 2 section), FFmpeg, and a p
 downloaded once and referenced by `PYANNOTE_CONFIG` (default `models/pyannote/config.yaml`). Models run in
 offline mode. The CLI reads plain audio directly (it does not go through the gate): use approved test audio only.
 `pytest` covers the merge/post-process logic and the orchestration with fake stages; it needs none of the ML packages.
+
+## Phase 3: API and job lifecycle
+
+`uploaded -> gate_passed -> queued -> processing -> completed | failed`. The worker (`python -m worker.run_worker`)
+runs the real pipeline, stores the transcript in `transcripts`, and records the current `stage` for progress.
+Interrupted jobs are requeued when the worker restarts.
+
+| Endpoint | Roles |
+|---|---|
+| `POST /recordings` (options: `min_speakers`, `max_speakers`, `denoise`, `filler_removal`) | admin, uploader |
+| `GET /recordings`, `GET /recordings/{id}` | all |
+| `GET /recordings/{id}/transcript`, `GET /recordings/{id}/export.json` | all (redacted view) |
+| same with `?original=true` | admin |
+| `GET /recordings/{id}/audio` (decrypted on the fly, supports Range) | admin |
+| `POST /recordings/{id}/retry` (failed recordings only) | admin |
+
+PHI redaction is Phase 5. Until then the redacted view carries no text (fail closed): only admins can read
+transcripts, via `?original=true`.

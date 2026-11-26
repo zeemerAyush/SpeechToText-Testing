@@ -80,24 +80,39 @@ def _timed(stages: Stages, name: str, fn, *args):
 
 
 def process_audio(
-    src: Path, options: Options, stages: Stages, cfg: PipelineConfig, work_root: Path
+    src: Path,
+    options: Options,
+    stages: Stages,
+    cfg: PipelineConfig,
+    work_root: Path,
+    on_stage: Callable[[str], None] | None = None,
 ) -> dict:
-    """Run the full pipeline on one audio file. Temporary files are always wiped."""
+    """Run the full pipeline on one audio file. Temporary files are always wiped.
+
+    ``on_stage`` is called with the stage name before each stage (used for progress tracking).
+    """
+    stages.timings.clear()
+
+    def run_stage(name: str, fn, *args):
+        if on_stage:
+            on_stage(name)
+        return _timed(stages, name, fn, *args)
+
     work_root.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="cli_", dir=work_root))
     try:
         wav = work / "clean.wav"
-        _timed(stages, "convert", stages.convert, src, wav, options.normalize)
+        run_stage("convert", stages.convert, src, wav, options.normalize)
         duration = wavio.duration_sec(wav)
 
         if options.denoise:
             denoised = work / "denoised.wav"
-            _timed(stages, "denoise", stages.denoise, wav, denoised)
+            run_stage("denoise", stages.denoise, wav, denoised)
             wav = denoised
 
-        regions = _timed(stages, "vad", stages.vad, wav)
-        words = _timed(stages, "transcribe", stages.transcribe, wav, options.initial_prompt)
-        turns = _timed(stages, "diarize", stages.diarize, wav, options.min_speakers, options.max_speakers)
+        regions = run_stage("vad", stages.vad, wav)
+        words = run_stage("transcribe", stages.transcribe, wav, options.initial_prompt)
+        turns = run_stage("diarize", stages.diarize, wav, options.min_speakers, options.max_speakers)
 
         segments = merge.build_segments(merge.assign_speakers(words, turns))
         segments = postprocess.postprocess(
@@ -120,7 +135,7 @@ def process_audio(
             "denoise": options.denoise,
             "normalize": options.normalize,
             "filler_removal": options.filler_removal,
-            "timings_sec": stages.timings,
+            "timings_sec": dict(stages.timings),
         },
     }
 

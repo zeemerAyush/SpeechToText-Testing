@@ -21,4 +21,5 @@ def get_db() -> Database:
 def ensure_indexes(db: Database) -> None:
     db.users.create_index("username", unique=True)
     db.recordings.create_index([("status", ASCENDING), ("created_at", ASCENDING)])
+    db.transcripts.create_index("recording_id", unique=True)
     db.audit_log.create_index([("recording_id", ASCENDING), ("at", ASCENDING)])

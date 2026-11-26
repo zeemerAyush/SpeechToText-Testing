@@ -75,3 +75,21 @@ def auth(client, db):
         assert r.status_code == 200, r.text
         return {"Authorization": f"Bearer {r.json()['access_token']}"}
     return _auth
+
+
+def fake_result(text: str = "My name is John Smith.") -> dict:
+    words = [{"word": t, "start": i * 0.5, "end": i * 0.5 + 0.4, "prob": 0.9} for i, t in enumerate(text.split())]
+    seg = {"speaker": "Speaker 1", "start": 0.0, "end": 2.0, "text": text, "confidence": 0.9, "words": words}
+    return {
+        "language": "en", "duration_sec": 1.0, "speaker_count": 1, "segments": [seg],
+        "full_text": f"Speaker 1: {text}",
+        "pipeline": {"whisper_model": "fake", "denoise": True, "timings_sec": {}},
+    }
+
+
+def ok_runner(audio, options, on_stage):
+    """Stand-in for the ML pipeline: reads the decrypted audio, reports stages, returns a transcript."""
+    assert audio.exists() and audio.stat().st_size > 0
+    for stage in ("convert", "transcribe"):
+        on_stage(stage)
+    return fake_result()

@@ -9,7 +9,7 @@ ACTIONS = {
     "login", "login_failed", "upload", "gate_pass", "gate_fail", "queued",
     "process_start", "process_done", "process_fail",
     "view_transcript", "view_original_text", "download_audio", "export_json",
-    "access_denied",
+    "access_denied", "retry",
 }
 
 

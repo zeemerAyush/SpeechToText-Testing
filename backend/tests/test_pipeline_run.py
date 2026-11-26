@@ -83,3 +83,10 @@ def test_temp_files_wiped_on_success_and_failure(tmp_path):
         process_audio(tmp_path / "in.wav", Options(), stages, PipelineConfig(), root)
     assert leftover(root) == []
     assert list(root.iterdir()) == []  # the job directory itself is gone too
+
+
+def test_on_stage_callback_reports_each_stage_in_order(tmp_path):
+    stages, _ = fake_stages()
+    seen = []
+    process_audio(tmp_path / "in.wav", Options(), stages, PipelineConfig(), tmp_path / "tmp", on_stage=seen.append)
+    assert seen == ["convert", "denoise", "vad", "transcribe", "diarize"]
