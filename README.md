@@ -21,3 +21,15 @@ python -m worker.run_worker                                       # separate ter
 ```
 
 On the GPU server set `REQUIRE_FFPROBE=true` and install FFmpeg so uploads are fully decoded.
+
+## Phase 2: command-line pipeline
+
+```powershell
+python -m worker.cli recording.wav -o transcript.json --device cuda --model large-v3
+# options: --no-denoise --no-normalize --filler-removal --min-speakers 2 --max-speakers 4 --initial-prompt "..."
+```
+
+Needs the ML packages (see `requirements.txt`, Phase 2 section), FFmpeg, and a pyannote pipeline
+downloaded once and referenced by `PYANNOTE_CONFIG` (default `models/pyannote/config.yaml`). Models run in
+offline mode. The CLI reads plain audio directly (it does not go through the gate): use approved test audio only.
+`pytest` covers the merge/post-process logic and the orchestration with fake stages; it needs none of the ML packages.

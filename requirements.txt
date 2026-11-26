@@ -1,4 +1,4 @@
-# Phase 1 (guardrail gate) dependencies. ML dependencies are added in Phase 2.
+# --- Phase 1: guardrail gate ---
 fastapi==0.115.*
 uvicorn[standard]==0.32.*
 python-multipart==0.0.*
@@ -9,7 +9,19 @@ argon2-cffi==23.1.*
 cryptography>=43,<46
 mutagen==1.47.*
 
-# Testing
+# --- Phase 2: ML pipeline (install on the GPU server; NOT needed for the unit tests) ---
+# FIRST install PyTorch with CUDA from the official index, e.g.:
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+# Also needs FFmpeg on PATH. See DESIGN.md "GPU setup".
+numpy
+faster-whisper
+pyannote.audio==3.3.*
+silero-vad
+deepfilternet
+nvidia-cublas-cu12; sys_platform != "darwin"
+nvidia-cudnn-cu12==9.*; sys_platform != "darwin"
+
+# --- Testing ---
 pytest==8.3.*
 httpx==0.27.*
 mongomock==4.3.*
