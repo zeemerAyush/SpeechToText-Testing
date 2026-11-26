@@ -1,0 +1,15 @@
+# Phase 1 (guardrail gate) dependencies. ML dependencies are added in Phase 2.
+fastapi==0.115.*
+uvicorn[standard]==0.32.*
+python-multipart==0.0.*
+pymongo==4.10.*
+pydantic-settings==2.6.*
+PyJWT==2.10.*
+argon2-cffi==23.1.*
+cryptography>=43,<46
+mutagen==1.47.*
+
+# Testing
+pytest==8.3.*
+httpx==0.27.*
+mongomock==4.3.*

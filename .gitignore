@@ -1,0 +1,31 @@
+# Environments and secrets
+.venv/
+.env
+*.key
+
+# Sensitive data (never commit recordings, keys or transcripts)
+storage/
+*.enc
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.ogg
+*.webm
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# Models
+models/
+*.pt
+*.bin
+*.onnx
+
+DESIGN.md
