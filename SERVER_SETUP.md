@@ -129,24 +129,48 @@ or build it on your development PC and copy the `frontend/dist` folder to the sa
 
 ## 9. Models (once, with internet access)
 
-The worker runs offline, so the models must be downloaded beforehand:
+The worker runs offline, so every model is downloaded beforehand with one script. First create a Hugging Face
+account, then:
+
+1. Create an access token (Settings > Access Tokens, "Read" is enough).
+2. While signed in, open these two pages and accept the conditions on each:
+   `https://huggingface.co/pyannote/speaker-diarization-3.1` and `https://huggingface.co/pyannote/segmentation-3.0`.
+   (If the script later says a third repository, `pyannote/wespeaker-voxceleb-resnet34-LM`, is gated, accept that one too.)
 
 ```bash
-# Whisper (faster-whisper) into the Hugging Face cache:
-HF_HUB_OFFLINE=0 python -c "from faster_whisper import download_model; download_model('large-v3')"
+HF_TOKEN=hf_xxxxxxxx python scripts/download_models.py --whisper large-v3
 ```
 
-The pyannote speaker-diarization pipeline needs a Hugging Face account, an access token, and accepting the licences
-of `pyannote/speaker-diarization-3.1`, `pyannote/segmentation-3.0` and `pyannote/wespeaker-voxceleb-resnet34-LM`.
-Download the three repositories into `models/pyannote/`, write a `config.yaml` there that points at the local files,
-and set `PYANNOTE_CONFIG` to it (default `models/pyannote/config.yaml`). DeepFilterNet and Silero fetch their small
-models on first use, so run one test file through the CLI while online (step 10) to let them download. The pyannote
-and DeepFilterNet steps have not been exercised yet; expect to adjust them on the first real run.
+It downloads Whisper into `models/whisper/`, the pyannote pipeline into `models/pyannote/` (and rewrites its config to use
+the local files), warms the DeepFilterNet model, installs the spaCy model, and checks the bundled Silero model. Each step
+prints `[OK]` or `[FAILED]` on its own, so you can fix one thing and re-run. The `models/` folder is git-ignored. At the end
+it prints the lines to add to `.env`:
+
+```
+DEVICE=cuda
+WHISPER_MODEL=large-v3
+WHISPER_MODEL_DIR=/…/models/whisper/large-v3
+PYANNOTE_CONFIG=/…/models/pyannote/config.yaml
+SPACY_MODEL=en_core_web_lg
+```
+
+The worker and `worker.cli` read these from `.env` (a variable already exported in the shell wins). DeepFilterNet is
+optional: if its step fails, add `DENOISE=0` to `.env`. The model libraries are also told not to send usage telemetry.
+
+Now verify everything loads **offline**, using the same code the worker uses:
+
+```bash
+python scripts/check_models.py
+```
+
+Expect seven `[PASS]` lines (FFmpeg, GPU, redaction, Silero, DeepFilterNet, Whisper, pyannote). Each failure comes with a
+hint. These scripts have not been run on a real GPU machine yet, so expect to adjust a step on the first run, and tell me
+the exact error if one fails.
 
 ## 10. Try the pipeline on one file
 
 ```bash
-DEVICE=cuda WHISPER_MODEL=large-v3 python -m worker.cli sample.wav -o out.json
+python -m worker.cli sample.wav -o out.json      # DEVICE/model come from .env
 ```
 
 ## 11. Run the app
@@ -154,7 +178,7 @@ DEVICE=cuda WHISPER_MODEL=large-v3 python -m worker.cli sample.wav -o out.json
 In one terminal (or under systemd, see below), the worker:
 
 ```bash
-DEVICE=cuda WHISPER_MODEL=large-v3 python -m worker.run_worker
+python -m worker.run_worker
 ```
 
 In another, the API (it also serves the web UI):
