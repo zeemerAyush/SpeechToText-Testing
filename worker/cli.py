@@ -28,7 +28,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--filler-removal", action="store_true", help="remove um/uh and stutter repeats")
     p.add_argument("--min-speakers", type=int)
     p.add_argument("--max-speakers", type=int)
-    p.add_argument("--initial-prompt", help="medical terms to bias Whisper spelling")
+    p.add_argument("--initial-prompt", default=config.INITIAL_PROMPT,
+                   help="medical terms to bias Whisper spelling (default: INITIAL_PROMPT / INITIAL_PROMPT_FILE)")
     p.add_argument("--device", default=config.DEVICE, choices=["cpu", "cuda"])
     p.add_argument("--model", default=config.WHISPER_MODEL, help="Whisper model (small, medium, large-v3)")
     return p

@@ -32,3 +32,7 @@ DESIGN.md
 
 # Browser-test scratch
 .playwright-mcp/
+
+# Evaluation data and results hold patient speech: never commit them
+eval_data/
+eval_runs/

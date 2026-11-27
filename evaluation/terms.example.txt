@@ -1,0 +1,7 @@
+# One medical term or phrase per line. Lines starting with # are ignored.
+cholecystectomy
+laparoscopic
+sutures
+incision
+anesthesia
+postoperative

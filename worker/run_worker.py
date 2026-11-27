@@ -40,6 +40,7 @@ def make_default_runner(settings: Settings) -> Runner:
             filler_removal=opts.get("filler_removal", False),
             min_speakers=opts.get("min_speakers"),
             max_speakers=opts.get("max_speakers"),
+            initial_prompt=config.INITIAL_PROMPT,
         )
         return process_audio(audio, options, stages, cfg, settings.tmp_dir, on_stage=on_stage)
 

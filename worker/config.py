@@ -19,3 +19,16 @@ PYANNOTE_CONFIG = os.environ.get("PYANNOTE_CONFIG", "models/pyannote/config.yaml
 SPACY_MODEL = os.environ.get("SPACY_MODEL", "en_core_web_lg")
 DENOISE = os.environ.get("DENOISE", "1") not in {"0", "false", "False"}
 POLL_INTERVAL_SEC = float(os.environ.get("WORKER_POLL_SEC", "3"))
+
+
+def load_initial_prompt(env: "os._Environ[str] | dict[str, str]" = os.environ) -> str | None:
+    """Text that biases Whisper's spelling of medical terms. From INITIAL_PROMPT_FILE (preferred, for long
+    prompts) or INITIAL_PROMPT. Whisper only uses roughly the last 220 tokens of it."""
+    path = env.get("INITIAL_PROMPT_FILE")
+    if path:
+        text = open(path, encoding="utf-8").read().strip()
+        return text or None
+    return (env.get("INITIAL_PROMPT") or "").strip() or None
+
+
+INITIAL_PROMPT = load_initial_prompt()

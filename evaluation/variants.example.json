@@ -1,0 +1,7 @@
+[
+  {"name": "baseline"},
+  {"name": "no-denoise", "denoise": false},
+  {"name": "medical-prompt", "initial_prompt": "Surgery clinic visit. Terms: laparoscopic, cholecystectomy, incision, sutures, anesthesia, postoperative, hernia, appendectomy."},
+  {"name": "two-speakers", "min_speakers": 2, "max_speakers": 2},
+  {"name": "small-model", "whisper_model": "small"}
+]

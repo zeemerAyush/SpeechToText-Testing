@@ -105,3 +105,20 @@ primary protection. Audio itself is not redacted.
 See [SERVER_SETUP.md](SERVER_SETUP.md): clone, Python/CUDA environment, MongoDB install and authentication,
 `scripts/init_db.py`, users, models, and running the worker and API. To run the backend tests against a real MongoDB
 instead of the in-memory stand-in: `TEST_MONGO_URI=mongodb://127.0.0.1:27017 pytest`.
+
+## Phase 6: evaluation
+
+Score the pipeline against hand-corrected reference transcripts and compare settings (denoise on/off, Whisper model,
+medical prompt, speaker hint) by word error rate (jiwer), diarization error rate (pyannote.metrics), medical-term
+recall and speed:
+
+```bash
+python -m evaluation --data eval_data --variants evaluation/variants.example.json --out eval_runs/first
+```
+
+It writes `report.md`, `results.json` and `runs.csv`. Preparing references, choosing variants and reading the report
+are explained in [evaluation/README.md](evaluation/README.md). Needs real approved recordings and the GPU machine's
+models; `eval_data/` and `eval_runs/` hold patient speech and are git-ignored.
+
+The tuned medical prompt is applied in production through `INITIAL_PROMPT_FILE` (or `INITIAL_PROMPT`), read by the
+worker and by `python -m worker.cli`.
