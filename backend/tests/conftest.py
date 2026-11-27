@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import math
+import os
 import struct
 import uuid
 import wave
@@ -45,9 +46,25 @@ def settings(tmp_path) -> Settings:
 
 @pytest.fixture
 def db():
-    database = mongomock.MongoClient(tz_aware=True)["test"]
+    """In-memory MongoDB by default. Set TEST_MONGO_URI to run the same tests against a real server
+    (each test gets a throw-away database that is dropped afterwards)."""
+    uri = os.environ.get("TEST_MONGO_URI")
+    if not uri:
+        database = mongomock.MongoClient(tz_aware=True)["test"]
+        ensure_indexes(database)
+        yield database
+        return
+    from pymongo import MongoClient
+
+    client = MongoClient(uri, tz_aware=True, serverSelectionTimeoutMS=5000)
+    name = f"stt_test_{uuid.uuid4().hex[:10]}"
+    database = client[name]
     ensure_indexes(database)
-    return database
+    try:
+        yield database
+    finally:
+        client.drop_database(name)
+        client.close()
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ def upload(client, headers, data=None, name="visit.wav"):
 
 def actions(db, rec_id=None):
     q = {"recording_id": rec_id} if rec_id else {}
-    return [a["action"] for a in db.audit_log.find(q).sort("at", 1)]
+    return [a["action"] for a in db.audit_log.find(q).sort([("at", 1), ("_id", 1)])]
 
 
 def tmp_files(settings):

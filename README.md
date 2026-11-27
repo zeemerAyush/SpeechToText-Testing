@@ -99,3 +99,9 @@ python -m worker.redact_backfill      # redacts stored transcripts that have no 
 
 Redaction is best effort (names in lowercase or noisy speech can be missed); access control and encryption remain the
 primary protection. Audio itself is not redacted.
+
+## Moving to the GPU server
+
+See [SERVER_SETUP.md](SERVER_SETUP.md): clone, Python/CUDA environment, MongoDB install and authentication,
+`scripts/init_db.py`, users, models, and running the worker and API. To run the backend tests against a real MongoDB
+instead of the in-memory stand-in: `TEST_MONGO_URI=mongodb://127.0.0.1:27017 pytest`.
