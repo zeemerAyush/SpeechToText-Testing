@@ -35,7 +35,7 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 # PyTorch with CUDA first (it must come from the CUDA index):
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 python -c "import torch; print(torch.cuda.is_available())"     # must print True
 pip install -r requirements.txt
 python -m spacy download en_core_web_lg                         # once, for PHI redaction

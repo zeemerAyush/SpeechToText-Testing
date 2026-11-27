@@ -11,8 +11,12 @@ mutagen==1.47.*
 
 # --- Phase 2: ML pipeline (NOT needed for the unit tests) ---
 # FIRST install PyTorch with CUDA from the official index, e.g.:
-#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+#   pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+# The versions are pinned on purpose: newer torchaudio releases removed AudioMetaData, which pyannote.audio 3.3
+# needs. The pins below keep pip from replacing the CUDA build you installed first.
 # Also needs FFmpeg on PATH. See DESIGN.md "GPU setup".
+torch==2.5.1
+torchaudio==2.5.1
 numpy
 faster-whisper
 pyannote.audio==3.3.*
